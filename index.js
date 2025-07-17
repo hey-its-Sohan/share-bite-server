@@ -1,6 +1,6 @@
 
 require('dotenv').config();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -38,8 +38,22 @@ async function run() {
 
     // featured foods API
     app.get('/featured-foods', async (req, res) => {
-      const cursor = shareBitesCollection.find().limit(6);
+      const cursor = shareBitesCollection.find().sort({ quantity: -1 }).limit(6);
       const result = await cursor.toArray();
+      res.send(result)
+    })
+
+    // food details API
+    app.get('/food-details/:id', async (req, res) => {
+      const query = { _id: new ObjectId(req.params.id) }
+      const result = await shareBitesCollection.findOne(query)
+      res.send(result)
+    })
+
+    // my foods API
+    app.get('/my-foods', async (res, req) => {
+      const query = { email: req.query.email }
+      const result = await shareBitesCollection.find(query).toArray()
       res.send(result)
     })
 
