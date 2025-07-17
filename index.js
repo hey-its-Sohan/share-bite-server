@@ -36,6 +36,20 @@ async function run() {
       res.send(result)
     })
 
+    // featured foods API
+    app.get('/featured-foods', async (req, res) => {
+      const cursor = shareBitesCollection.find().limit(6);
+      const result = await cursor.toArray();
+      res.send(result)
+    })
+
+    // post data to MongoDB
+    app.post('/add-food', async (req, res) => {
+      const foodData = req.body
+      const result = await shareBitesCollection.insertOne(foodData)
+      res.send(result)
+    })
+
 
 
 
