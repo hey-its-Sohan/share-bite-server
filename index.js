@@ -60,14 +60,51 @@ async function run() {
     await client.connect();
 
     const shareBitesCollection = client.db('shareBiteDB').collection('shareBite')
+    const foodRequestsCollection = client.db('shareBiteDB').collection('requestedFoods')
 
     // get API for all foods data
     app.get('/all-foods', async (req, res) => {
-      const query = { availability: 'Available' }
-      const cursor = shareBitesCollection.find(query);
-      const result = await cursor.toArray();
-      res.send(result)
-    })
+      try {
+        const authHeader = req.headers.authorization;
+        let userEmail = null;
+
+        // Decode Firebase token if provided
+        if (authHeader?.startsWith('Bearer ')) {
+          const token = authHeader.split(' ')[1];
+          const decoded = await admin.auth().verifyIdToken(token);
+          userEmail = decoded.email;
+        }
+
+        let requestedIds = [];
+
+        // If the user is logged in, get their requested food IDs
+        if (userEmail) {
+          const requests = await foodRequestsCollection.find({ userEmail }).toArray();
+          requestedIds = requests.map(req => new ObjectId(req._id));
+        }
+
+        // Build query to exclude requested foods (if any)
+        const query = {
+          availability: "Available",
+          ...(requestedIds.length > 0 && { _id: { $nin: requestedIds } })
+        };
+
+        const result = await shareBitesCollection.find(query).toArray();
+        res.send(result);
+
+      } catch (err) {
+        console.error('Error fetching available foods:', err);
+        res.status(500).send({ message: 'Internal server error' });
+      }
+    });
+
+
+    // app.get('/all-foods', async (req, res) => {
+    //   const query = { availability: 'Available' }
+    //   const cursor = shareBitesCollection.find(query);
+    //   const result = await cursor.toArray();
+    //   res.send(result)
+    // })
 
     // featured foods API
     app.get('/featured-foods', async (req, res) => {
@@ -91,6 +128,13 @@ async function run() {
       res.send(result)
     })
 
+    // my requested food list API
+    app.get('/my-requests', verifyToken, async (req, res) => {
+      const query = { userEmail: req.user.email }
+      const result = await foodRequestsCollection.find(query).toArray();
+      res.send(result)
+    })
+
     // post data to MongoDB
     app.post('/add-food', async (req, res) => {
       const foodData = req.body
@@ -99,13 +143,24 @@ async function run() {
     })
 
     // post food request
-    app.patch('/requested-food/:id', verifyToken, async (req, res) => {
-      const query = { _id: new ObjectId(req.params.id) }
-      const result = await shareBitesCollection.updateOne(query, {
-        $set: { availability: "Requested", notes }
-      })
+    app.post('/requested-food', verifyToken, async (req, res) => {
+      const data = req.body
+      const result = await foodRequestsCollection.insertOne(data);
       res.send(result)
     })
+
+    // Update food availability
+    // app.patch('/update-availability/:id', verifyToken, async (req, res) => {
+    //   const query = { _id: new ObjectId(req.params.id) }
+    //   const update = {
+    //     $set: {
+    //       availability: req.body.availability,
+    //       notes: req.body.notes
+    //     }
+    //   };
+    //   const result = await shareBitesCollection.updateOne(query, update)
+    //   res.send(result)
+    // })
 
 
 
