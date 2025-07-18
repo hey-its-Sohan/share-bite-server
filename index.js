@@ -71,7 +71,8 @@ async function run() {
 
     // featured foods API
     app.get('/featured-foods', async (req, res) => {
-      const cursor = shareBitesCollection.find().sort({ quantity: -1 }).limit(6);
+      const query = { availability: 'Available' }
+      const cursor = shareBitesCollection.find(query).sort({ quantity: -1 }).limit(6);
       const result = await cursor.toArray();
       res.send(result)
     })
@@ -94,6 +95,15 @@ async function run() {
     app.post('/add-food', async (req, res) => {
       const foodData = req.body
       const result = await shareBitesCollection.insertOne(foodData)
+      res.send(result)
+    })
+
+    // post food request
+    app.patch('/requested-food/:id', verifyToken, async (req, res) => {
+      const query = { _id: new ObjectId(req.params.id) }
+      const result = await shareBitesCollection.updateOne(query, {
+        $set: { availability: "Requested", notes }
+      })
       res.send(result)
     })
 
