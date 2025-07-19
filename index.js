@@ -142,6 +142,8 @@ async function run() {
       res.send(result)
     })
 
+
+
     // post food request
     app.post('/requested-food', verifyToken, async (req, res) => {
       const data = req.body
@@ -161,6 +163,18 @@ async function run() {
     //   const result = await shareBitesCollection.updateOne(query, update)
     //   res.send(result)
     // })
+
+    app.put('/update-food/:id', async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const updatedFood = req.body
+      const updatedDoc = {
+        $set: updatedFood
+      }
+      const result = await roommatesCollection.updateOne(filter, updatedDoc)
+      res.send(result)
+
+    })
 
 
 
